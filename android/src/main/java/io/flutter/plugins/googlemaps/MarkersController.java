@@ -4,7 +4,11 @@
 
 package io.flutter.plugins.googlemaps;
 
+import android.content.Context;
+import android.graphics.Bitmap;
+
 import com.google.android.gms.maps.GoogleMap;
+import com.google.android.gms.maps.model.BitmapDescriptor;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
@@ -19,11 +23,14 @@ class MarkersController {
   private final Map<String, String> googleMapsMarkerIdToDartMarkerId;
   private final MethodChannel methodChannel;
   private GoogleMap googleMap;
+  private final HashMap<String, BitmapDescriptor> bitmaps = new HashMap<>();
+  private final Context context;
 
-  MarkersController(MethodChannel methodChannel) {
+  MarkersController(MethodChannel methodChannel, Context context) {
     this.markerIdToController = new HashMap<>();
     this.googleMapsMarkerIdToDartMarkerId = new HashMap<>();
     this.methodChannel = methodChannel;
+    this.context = context;
   }
 
   void setGoogleMap(GoogleMap googleMap) {
@@ -100,7 +107,7 @@ class MarkersController {
       return;
     }
     MarkerBuilder markerBuilder = new MarkerBuilder();
-    String markerId = Convert.interpretMarkerOptions(marker, markerBuilder);
+    String markerId = Convert.interpretMarkerOptions(marker, markerBuilder, bitmaps, context);
     MarkerOptions options = markerBuilder.build();
     addMarker(markerId, options, markerBuilder.consumeTapEvents());
   }
@@ -119,7 +126,7 @@ class MarkersController {
     String markerId = getMarkerId(marker);
     MarkerController markerController = markerIdToController.get(markerId);
     if (markerController != null) {
-      Convert.interpretMarkerOptions(marker, markerController);
+      Convert.interpretMarkerOptions(marker, markerController, bitmaps, context);
     }
   }
 

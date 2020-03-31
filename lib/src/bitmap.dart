@@ -58,12 +58,13 @@ class BitmapDescriptor {
     String assetName, {
     AssetBundle bundle,
     String package,
+    double scale
   }) async {
     if (configuration.devicePixelRatio != null) {
       return BitmapDescriptor._(<dynamic>[
         'fromAssetImage',
         assetName,
-        configuration.devicePixelRatio,
+        scale,
       ]);
     }
     final AssetImage assetImage =
@@ -73,7 +74,7 @@ class BitmapDescriptor {
     return BitmapDescriptor._(<dynamic>[
       'fromAssetImage',
       assetBundleImageKey.name,
-      4.0,
+      scale,
     ]);
   }
 

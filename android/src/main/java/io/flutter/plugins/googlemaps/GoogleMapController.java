@@ -106,7 +106,7 @@ final class GoogleMapController
         new MethodChannel(registrar.messenger(), "plugins.flutter.io/google_maps_" + id);
     methodChannel.setMethodCallHandler(this);
     this.registrarActivityHashCode = registrar.activity().hashCode();
-    this.markersController = new MarkersController(methodChannel);
+    this.markersController = new MarkersController(methodChannel, context);
     this.polygonsController = new PolygonsController(methodChannel);
     this.polylinesController = new PolylinesController(methodChannel, density);
     this.circlesController = new CirclesController(methodChannel);

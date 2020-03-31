@@ -4,9 +4,13 @@
 
 package io.flutter.plugins.googlemaps;
 
+import android.content.Context;
+import android.content.res.AssetManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Point;
+import android.graphics.drawable.BitmapDrawable;
+
 import com.google.android.gms.maps.CameraUpdate;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.model.BitmapDescriptor;
@@ -24,6 +28,9 @@ import com.google.android.gms.maps.model.PatternItem;
 import com.google.android.gms.maps.model.RoundCap;
 import com.google.android.gms.maps.model.SquareCap;
 import io.flutter.view.FlutterMain;
+
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -33,7 +40,7 @@ import java.util.Map;
 /** Conversions between JSON-like values and GoogleMaps data types. */
 class Convert {
 
-  private static BitmapDescriptor toBitmapDescriptor(Object o) {
+  private static BitmapDescriptor toBitmapDescriptor(Object o, HashMap<String, BitmapDescriptor> bitmaps, Context context) {
     final List<?> data = toList(o);
     switch (toString(data.get(0))) {
       case "defaultMarker":
@@ -52,8 +59,17 @@ class Convert {
         }
       case "fromAssetImage":
         if (data.size() == 3) {
-          return BitmapDescriptorFactory.fromAsset(
-              FlutterMain.getLookupKeyForAsset(toString(data.get(1))));
+          String key = toString(data.get(1));
+          if (bitmaps.containsKey(key)) {
+            return bitmaps.get(key);
+          } else {
+            double scale = toDouble(data.get(2));
+            Bitmap bitmapNormal = getBitmapFromAssetManager(context, FlutterMain.getLookupKeyForAsset(key));
+            Bitmap bitmapSmall = Bitmap.createScaledBitmap(bitmapNormal, toInt(bitmapNormal.getWidth() * scale), toInt(bitmapNormal.getHeight() * scale), false);
+            BitmapDescriptor result = BitmapDescriptorFactory.fromBitmap(bitmapSmall);
+            bitmaps.put(key, result);
+            return result;
+          }
         } else {
           throw new IllegalArgumentException(
               "'fromAssetImage' Expected exactly 3 arguments, got: " + data.size());
@@ -63,6 +79,22 @@ class Convert {
       default:
         throw new IllegalArgumentException("Cannot interpret " + o + " as BitmapDescriptor");
     }
+  }
+
+
+  public static Bitmap getBitmapFromAssetManager(Context context, String filePath) {
+    AssetManager assetManager = context.getAssets();
+
+    InputStream istr;
+    Bitmap bitmap = null;
+    try {
+      istr = assetManager.open(filePath);
+      bitmap = BitmapFactory.decodeStream(istr);
+    } catch (IOException e) {
+      // handle exception
+    }
+
+    return bitmap;
   }
 
   private static BitmapDescriptor getBitmapFromBytes(List<?> data) {
@@ -335,7 +367,7 @@ class Convert {
   }
 
   /** Returns the dartMarkerId of the interpreted marker. */
-  static String interpretMarkerOptions(Object o, MarkerOptionsSink sink) {
+  static String interpretMarkerOptions(Object o, MarkerOptionsSink sink, HashMap<String, BitmapDescriptor> bitmaps, Context context) {
     final Map<?, ?> data = toMap(o);
     final Object alpha = data.get("alpha");
     if (alpha != null) {
@@ -360,7 +392,7 @@ class Convert {
     }
     final Object icon = data.get("icon");
     if (icon != null) {
-      sink.setIcon(toBitmapDescriptor(icon));
+      sink.setIcon(toBitmapDescriptor(icon, bitmaps, context));
     }
 
     final Object infoWindow = data.get("infoWindow");
@@ -595,9 +627,9 @@ class Convert {
         return new SquareCap();
       case "customCap":
         if (data.size() == 2) {
-          return new CustomCap(toBitmapDescriptor(data.get(1)));
+          return new CustomCap(toBitmapDescriptor(data.get(1), null, null));
         } else {
-          return new CustomCap(toBitmapDescriptor(data.get(1)), toFloat(data.get(2)));
+          return new CustomCap(toBitmapDescriptor(data.get(1), null, null), toFloat(data.get(2)));
         }
       default:
         throw new IllegalArgumentException("Cannot interpret " + o + " as Cap");
